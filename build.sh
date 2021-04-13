@@ -10,12 +10,12 @@ function check_cmake() {
 }
 
 function check_clang() {
-    if ! clang-10 --version >/dev/null; then
-        echo "clang-10 required!"
+    if ! clang-11 --version >/dev/null; then
+        echo "clang-11 required!"
         exit 1
     fi
-    if ! clang++-10 --version >/dev/null; then
-        echo "clang++-10 required!"
+    if ! clang++-11 --version >/dev/null; then
+        echo "clang++-11 required!"
         exit 1
     fi
 }
@@ -122,8 +122,8 @@ function apply_emcc() {
 }
 
 function invoke_cmake() {
-    CC=clang-10 CXX=clang++-10 cmake -B build . -DCMAKE_BUILD_TYPE=Release
-    cmake --build build
+    CC=clang-11 CXX=clang++-11 cmake -B build . -DCMAKE_BUILD_TYPE=Release
+    cmake --build build --verbose=2
 }
 
 function sed_wasm_module() {

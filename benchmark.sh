@@ -3,6 +3,8 @@
 MODE=wasm
 SSVMC=thirdparty/ssvm/build/tools/ssvm/ssvmc
 SSVM=thirdparty/ssvm/build/tools/ssvm/ssvm
+WAMRC=~/repo/wasm-micro-runtime/wamr-compiler/build/wamrc
+WAMR=~/repo/wasm-micro-runtime/product-mini/platforms/linux/build/iwasm
 LUCETC=thirdparty/lucet/target/release/lucetc
 LUCET_WASI=thirdparty/lucet/target/release/lucet-wasi
 LUCET_BINDINGS=thirdparty/lucet/lucet-wasi/bindings.json
@@ -39,6 +41,7 @@ function prepare() {
     mkdir -p benchmark/ssvm
     mkdir -p benchmark/lucet
     mkdir -p benchmark/wavm
+    mkdir -p benchmark/wamr
     mkdir -p benchmark/wasmer_singlepass
     mkdir -p benchmark/wasmer_cranelift
     mkdir -p benchmark/wasmer_llvm
@@ -50,7 +53,7 @@ function prepare() {
 }
 
 function compile() {
-    rm -f benchmark/ssvm/compile.time benchmark/lucet/compile.time benchmark/wavm/compile.time benchmark/wasmer_*/compile.time
+    rm -f benchmark/ssvm/compile.time benchmark/lucet/compile.time benchmark/wavm/compile.time benchmark/wasmer_*/compile.time benchmark/wamr/compile.time
     for ((i=0; i<"${#NAME[@]}"; ++i)); do
         (time "$SSVMC" --enable-simd build/"$MODE"/"${NAME[i]}".wasm benchmark/ssvm/"${NAME[i]}".so 2>&1) 2>> benchmark/ssvm/compile.time || true
         (time "$LUCETC" build/"$MODE"/"${NAME[i]}".wasm --wasi_exe --opt-level speed --bindings "$LUCET_BINDINGS" -o benchmark/lucet/"${NAME[i]}".so 2>&1) 2>> benchmark/lucet/compile.time || true
@@ -58,6 +61,7 @@ function compile() {
         (time wasmer compile --enable-simd --singlepass build/"$MODE"/"${NAME[i]}".wasm -o benchmark/wasmer_singlepass/"${NAME[i]}".wjit 2>&1) 2>> benchmark/wasmer_singlepass/compile.time || true
         (time wasmer compile --enable-simd --cranelift build/"$MODE"/"${NAME[i]}".wasm -o benchmark/wasmer_cranelift/"${NAME[i]}".wjit 2>&1) 2>> benchmark/wasmer_cranelift/compile.time || true
         (time wasmer compile --enable-simd --llvm build/"$MODE"/"${NAME[i]}".wasm -o benchmark/wasmer_llvm/"${NAME[i]}".wjit 2>&1) 2>> benchmark/wasmer_llvm/compile.time || true
+        (time "$WAMRC" -o benchmark/wamr/"${NAME[i]}".so build/"$MODE"/"${NAME[i]}".wasm 2>&1) 2>> benchmark/wamr/compile.time || true
     done
 }
 
@@ -84,6 +88,19 @@ function benchmark_ssvm() {
             time "$SSVM" --enable-simd benchmark/ssvm/"${NAME[i]}".so "${ARGS[i]}" <benchmark/random >&/dev/null
         done 2> "$LOG"
         /usr/bin/time -o "benchmark/ssvm/"${NAME[i]}".time" --verbose "$SSVM" --enable-simd benchmark/ssvm/"${NAME[i]}".so "${ARGS[i]}" <benchmark/random >&/dev/null
+    done
+}
+
+function benchmark_wamr() {
+    echo benchmark_wamr
+    for ((i=0; i<"${#NAME[@]}"; ++i)); do
+        LOG="benchmark/wamr/"${NAME[i]}".log"
+        rm -f "$LOG"
+        touch "$LOG"
+        for ((j=0; j<$COUNT; ++j)); do
+            time "$WAMR" benchmark/wamr/"${NAME[i]}".so "${ARGS[i]}" <benchmark/random >&/dev/null
+        done 2> "$LOG"
+        /usr/bin/time -o "benchmark/wamr/"${NAME[i]}".time" --verbose "$WAMR" benchmark/wamr/"${NAME[i]}".so "${ARGS[i]}" <benchmark/random >&/dev/null
     done
 }
 
@@ -196,8 +213,8 @@ function print_result() {
         echo -n ,"$name"
     done
     echo
-    for type in native ssvm lucet wavm wasmer_singlepass wasmer_cranelift wasmer_llvm wasmer_jit v8 docker; do
-    #for type in ssvm; do
+    # for type in native ssvm wamr lucet wavm wasmer_singlepass wasmer_cranelift wasmer_llvm wasmer_jit v8 docker; do
+    for type in native ssvm wamr docker; do
         echo -n "$type"
         for name in "${NAME[@]}"; do
             echo -n ,"$(awk 'function abs(x){return ((x < 0.0) ? -x : x)} {sum+=$0; sumsq+=($0)^2} END {mean = sum / NR; error = sqrt(abs(sumsq / NR - mean^2)); printf("%.3f(%.3f)", mean, error)}' benchmark/"$type"/"$name".log)"
@@ -206,16 +223,17 @@ function print_result() {
     done | tee result.csv
 }
 
-prepare
-compile
-benchmark_native
-benchmark_ssvm
-benchmark_lucet
-benchmark_wavm
-benchmark_wasmer_singlepass
-benchmark_wasmer_cranelift
-benchmark_wasmer_llvm
-benchmark_wasmer_jit
-benchmark_v8
+# prepare
+# compile
+# benchmark_native
+# benchmark_ssvm
+benchmark_wamr
+# benchmark_lucet
+# benchmark_wavm
+# benchmark_wasmer_singlepass
+# benchmark_wasmer_cranelift
+# benchmark_wasmer_llvm
+# benchmark_wasmer_jit
+# benchmark_v8
 benchmark_docker
 print_result

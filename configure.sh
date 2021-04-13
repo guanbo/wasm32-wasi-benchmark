@@ -47,8 +47,8 @@ nvm use -g v14.3.0
 # Add LLVM GPG key
 curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
 # Add LLVM 10 apt repository
-sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main" -y # For Ubuntu 18.04
-# sudo apt-add-repository "http://apt.llvm.org/focal/ llvm-toolchain-focal-10 main" # For Ubuntu 20.04
+# sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main" -y # For Ubuntu 18.04
+sudo apt-add-repository "http://apt.llvm.org/focal/ llvm-toolchain-focal main" -y # For Ubuntu 20.04
 
 # LLVM
 sudo apt install -y libllvm-10-ocaml-dev libllvm10 llvm-10 llvm-10-dev llvm-10-doc llvm-10-examples llvm-10-runtime
@@ -67,7 +67,8 @@ sudo apt install -y libboost-dev zlib1g-dev
 wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
 	gpg --dearmor - | \
 	sudo tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
-sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main' -y
+sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' -y
+#sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main' -y
 sudo apt update
 sudo apt install -y cmake
 

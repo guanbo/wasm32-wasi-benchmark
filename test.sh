@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
 MODE=wasm
-SSVMC=~/workspace/ssvm/build/tools/ssvm-aot/ssvmc
-SSVMR=~/workspace/ssvm/build/tools/ssvm-aot/ssvmr
+SSVMC=~/repo/SSVM/build/tools/ssvm/ssvmc
+SSVMR=~/repo/SSVM/build/tools/ssvm/ssvm
+WAMRC=~/repo/wasm-micro-runtime/wamr-compiler/build/wamrc
+WAMR=~/repo/wasm-micro-runtime/product-mini/platforms/linux/build/iwasm
 LUCETC=thirdparty/lucet/target/release/lucetc
 LUCET_WASI=thirdparty/lucet/target/release/lucet-wasi
 LUCET_BINDINGS=thirdparty/lucet/lucet-wasi/bindings.json
@@ -23,6 +25,7 @@ function prepare() {
     mkdir -p test/ssvm
     mkdir -p test/lucet
     mkdir -p test/wavm
+    mkdir -p test/wamr
     mkdir -p test/v8
     mkdir -p $WAVM_OBJECT_CACHE_DIR
 }
@@ -32,6 +35,7 @@ function compile() {
         "$SSVMC" build/"$MODE"/"${NAME[i]}".wasm test/ssvm/"${NAME[i]}".so
         "$LUCETC" build/"$MODE"/"${NAME[i]}".wasm --wasi_exe --opt-level speed --bindings "$LUCET_BINDINGS" -o test/lucet/"${NAME[i]}".so
         "$WAVM" compile --format=precompiled-wasm build/"$MODE"/"${NAME[i]}".wasm test/wavm/"${NAME[i]}".wasm
+	"$WAMRC" -o test/wamr/"${NAME[i]}".aot build/"$MODE"/"${NAME[i]}".wasm 
     done
 }
 
@@ -62,12 +66,21 @@ function test_wavm() {
     done
 }
 
+function test_wamr() {
+    echo test_wamr
+    for ((i=0; i<"${#NAME[@]}"; ++i)); do
+        LOG="test/wamr/"${NAME[i]}".log"
+        rm -f "$LOG"
+        "$WAMR" test/wamr/"${NAME[i]}".so "${ARGS[i]}" >"$LOG"
+    done
+}
+
 function test_v8() {
     echo test_v8
     for ((i=0; i<"${#NAME[@]}"; ++i)); do
         LOG="test/v8/"${NAME[i]}".log"
         rm -f "$LOG"
-        nodejs --experimental-wasi-unstable-preview1 --experimental-wasm-bigint v8/index.js build/"$MODE"/"${NAME[i]}".wasm "${ARGS[i]}" >"$LOG"
+        node --experimental-wasi-unstable-preview1 --experimental-wasm-bigint v8/index.js build/"$MODE"/"${NAME[i]}".wasm "${ARGS[i]}" >"$LOG"
     done
 }
 
@@ -76,4 +89,5 @@ compile
 test_ssvm
 test_lucet
 test_wavm
+test_wamr
 test_v8
